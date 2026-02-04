@@ -16,52 +16,55 @@ export function SpiritOverlay() {
     function updateSpirit() {
       const scrollY = window.scrollY
       const maxScroll = document.body.scrollHeight - window.innerHeight
-      // Normaliza o scroll, mas mantém um valor mínimo para a animação inicial
       const scrollPercent = Math.min(Math.max(scrollY / maxScroll, 0), 1)
       
       const width = window.innerWidth
       const height = window.innerHeight
 
-      const steps = 50
-      // A amplitude diminui conforme desce para dar um efeito de "foco"
-      const amplitude = (width < 768 ? 30 : 60)
+      // 1. LINHA FIXA (Geometria baseada na tela, mas estável)
+      const steps = 40
+      const amplitude = (width < 768 ? 40 : 80)
       const pts: string[] = []
 
       for (let i = 0; i <= steps; i++) {
         const ratio = i / steps
         const py = ratio * height
-        // O movimento lateral simula um fluido/plasma
-        const px = width / 2 + Math.sin(ratio * 4 + Date.now() * 0.002) * amplitude * (1 - ratio * 0.5)
+        // Seno fixo baseado na posição vertical (ratio), sem o fator tempo
+        const px = width / 2 + Math.sin(ratio * 5) * amplitude
         pts.push(`${px},${py}`)
       }
 
       const newD = `M ${pts[0]} L ${pts.join(" L ")}`
       setPathD(newD)
       
-      // Sempre visível no início, indicando o scroll
-      setPathOpacity(0.4 - scrollPercent * 0.3)
+      // Opacidade da linha aumenta sutilmente com o scroll
+      setPathOpacity(0.1 + scrollPercent * 0.15)
 
-      // A semente (bolinha) agora flutua na parte superior/média para puxar o olhar para baixo
-      const seedY = height * 0.2 + (Math.sin(Date.now() * 0.001) * 20)
-      const seedRatio = seedY / height
-      const seedX = width / 2 + Math.sin(seedRatio * 4 + Date.now() * 0.002) * amplitude * (1 - seedRatio * 0.5)
+      // 2. BOLINHA (Semente Espiritual)
+      // Começa em 20% da altura e termina em 85% conforme o scroll desce
+      const startY = height * 0.2
+      const endY = height * 0.85
+      const currentY = startY + (endY - startY) * scrollPercent
+      
+      const yRatio = currentY / height
+      const currentX = width / 2 + Math.sin(yRatio * 5) * amplitude
 
       setSeedPosition({
-        cx: seedX,
-        cy: seedY,
-        r: 4 + Math.sin(Date.now() * 0.003) * 2, // Pulsação suave
+        cx: currentX,
+        cy: currentY,
+        // Cresce de 3px para até 18px
+        r: 3 + (scrollPercent * 15),
       })
 
-      setSeedGlow(20 + Math.sin(Date.now() * 0.002) * 10)
+      // O brilho aumenta drasticamente (de 15 para 60)
+      setSeedGlow(15 + (scrollPercent * 45))
     }
 
-    // Loop de animação para o efeito de plasma não depender apenas do scroll
-    const animId = setInterval(updateSpirit, 16)
+    updateSpirit()
     window.addEventListener("scroll", updateSpirit)
     window.addEventListener("resize", updateSpirit)
 
     return () => {
-      clearInterval(animId)
       window.removeEventListener("scroll", updateSpirit)
       window.removeEventListener("resize", updateSpirit)
     }
@@ -69,50 +72,74 @@ export function SpiritOverlay() {
 
   useEffect(() => {
     if (!pathRef.current) return
-    const len = pathRef.current.getTotalLength()
-    setPathLength(len)
+    try {
+      const len = pathRef.current.getTotalLength()
+      setPathLength(len)
+    } catch {
+      setPathLength(0)
+    }
   }, [pathD])
+
+  useEffect(() => {
+    let raf = 0
+    let last = performance.now()
+    const speed = -60 // NEGATIVO para o fluxo subir (ao contrário)
+
+    function tick(now: number) {
+      const dt = now - last
+      last = now
+      if (pathLength > 0) {
+        // O offset negativo faz o efeito de "partículas" subir pela linha fixa
+        offsetRef.current = (offsetRef.current + (dt / 1000) * speed) % pathLength
+        if (pathRef.current) {
+          const dashLen = Math.max(Math.round(pathLength * 0.1), 10)
+          const gap = 40 
+          pathRef.current.style.strokeDasharray = `${dashLen} ${gap}`
+          pathRef.current.style.strokeDashoffset = `${offsetRef.current}`
+        }
+      }
+      raf = requestAnimationFrame(tick)
+    }
+
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [pathLength])
 
   return (
     <svg className="fixed inset-0 w-full h-full z-[25] pointer-events-none" aria-hidden="true">
+      {/* Filtro de Plasma para a Linha */}
       <defs>
-        {/* Gradiente para a linha sumir no final da tela */}
-        <linearGradient id="plasmaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#d4af37" stopOpacity="0.8" />
-          <stop offset="50%" stopColor="#d4af37" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#d4af37" stopOpacity="0" />
-        </linearGradient>
+        <filter id="plasma-glow">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
       </defs>
 
-      {/* Brilho de fundo (Glow) */}
+      {/* Linha de fundo (Rastro estático translúcido) */}
       <path
         d={pathD}
         fill="none"
-        stroke="url(#plasmaGradient)"
-        strokeWidth={4}
-        style={{
-          filter: "blur(8px)",
-          opacity: pathOpacity * 0.5,
-          transition: "opacity 0.5s ease",
-        }}
+        stroke="#d4af37"
+        strokeWidth={0.5}
+        style={{ opacity: pathOpacity * 0.5 }}
       />
 
-      {/* Linha Principal com Dash animado descendo */}
+      {/* Linha animada (Fluxo invertido) */}
       <path
         ref={pathRef}
         d={pathD}
         fill="none"
-        stroke="url(#plasmaGradient)"
-        strokeWidth={1.5}
-        strokeDasharray="20 150" // Cria pequenos segmentos de plasma
+        stroke="#d4af37"
+        strokeWidth={1.2}
+        strokeLinecap="round"
         style={{
-          strokeDashoffset: (Date.now() * 0.1) % 1000, // Faz o plasma "descer"
-          filter: "drop-shadow(0 0 5px #d4af37)",
+          filter: "url(#plasma-glow)",
           opacity: pathOpacity,
+          transition: "opacity 0.4s ease",
         }}
       />
 
-      {/* Semente (Bolinha Dourada) */}
+      {/* Semente Dourada (Aumenta e Brilha com Scroll) */}
       <circle
         cx={seedPosition.cx}
         cy={seedPosition.cy}
@@ -120,8 +147,7 @@ export function SpiritOverlay() {
         fill="#d4af37"
         style={{
           filter: `drop-shadow(0 0 ${seedGlow}px #d4af37) drop-shadow(0 0 ${seedGlow / 2}px #fff)`,
-          opacity: pathOpacity + 0.2,
-          transition: "filter 0.2s ease",
+          transition: "r 0.1s ease-out, filter 0.1s ease-out",
         }}
       />
     </svg>
