@@ -13,6 +13,8 @@ export function SpiritOverlay() {
   const offsetRef = useRef(0)
 
   useEffect(() => {
+    let animationFrame: number
+
     function updateSpirit() {
       const scrollY = window.scrollY
       const maxScroll = document.body.scrollHeight - window.innerHeight
@@ -20,53 +22,58 @@ export function SpiritOverlay() {
       
       const width = window.innerWidth
       const height = window.innerHeight
+      const time = performance.now() * 0.001 // Tempo para animação orgânica
 
-      // 1. LINHA FLUIDA (Cálculo de Curva Suave)
-      const steps = 12 // Menos passos com curvas geram um visual mais orgânico
-      const amplitude = (width < 768 ? 50 : 100)
+      // 1. LINHA FIXA COM MOVIMENTO DE PLASMA (WOBBLE)
+      const steps = 15
+      const amplitude = (width < 768 ? 40 : 80)
       let d = `M ${width / 2} 0`
 
       for (let i = 1; i <= steps; i++) {
         const ratio = i / steps
         const py = ratio * height
-        const px = width / 2 + Math.sin(ratio * 4) * amplitude
         
-        // Usamos Quadratic Curve (Q) para suavizar a "espinha dorsal" do plasma
+        // Adiciona uma pequena variação temporal (time) para a linha "viver"
+        const wobble = Math.sin(ratio * 6 + time) * 3 
+        const px = width / 2 + Math.sin(ratio * 4) * amplitude + wobble
+        
         const prevRatio = (i - 0.5) / steps
-        const midX = width / 2 + Math.sin(prevRatio * 4) * amplitude
-        const midY = (prevRatio) * height
+        const midWobble = Math.sin(prevRatio * 6 + time) * 3
+        const midX = width / 2 + Math.sin(prevRatio * 4) * amplitude + midWobble
+        const midY = prevRatio * height
         
         d += ` Q ${midX} ${midY}, ${px} ${py}`
       }
 
       setPathD(d)
-      setPathOpacity(0.15 + scrollPercent * 0.2)
+      setPathOpacity(0.2 + scrollPercent * 0.3)
 
-      // 2. BOLINHA (Semente Energética)
-      const startY = height * 0.15
-      const endY = height * 0.9
+      // 2. BOLINHA (Semente de Plasma)
+      const startY = height * 0.1
+      const endY = height * 0.95
       const currentY = startY + (endY - startY) * scrollPercent
       
-      // Encontrar o X correspondente na curva para a bolinha seguir o caminho
       const yRatio = currentY / height
-      const currentX = width / 2 + Math.sin(yRatio * 4) * amplitude
+      const seedWobble = Math.sin(yRatio * 6 + time) * 3
+      const currentX = width / 2 + Math.sin(yRatio * 4) * amplitude + seedWobble
 
       setSeedPosition({
         cx: currentX,
         cy: currentY,
-        r: 4 + (scrollPercent * 18), // Aumenta significativamente
+        r: 5 + (scrollPercent * 25), // Fica bem grande no final
       })
 
-      setSeedGlow(20 + (scrollPercent * 60))
+      setSeedGlow(25 + (scrollPercent * 70))
+      
+      animationFrame = requestAnimationFrame(updateSpirit)
     }
 
-    updateSpirit()
-    window.addEventListener("scroll", updateSpirit)
-    window.addEventListener("resize", updateSpirit)
+    animationFrame = requestAnimationFrame(updateSpirit)
+    window.addEventListener("scroll", () => {}) // Trigger de re-render opcional
+    window.addEventListener("resize", () => {})
 
     return () => {
-      window.removeEventListener("scroll", updateSpirit)
-      window.removeEventListener("resize", updateSpirit)
+      cancelAnimationFrame(animationFrame)
     }
   }, [])
 
@@ -78,85 +85,87 @@ export function SpiritOverlay() {
     } catch { setPathLength(0) }
   }, [pathD])
 
-  useEffect(() => {
-    let raf = 0
-    let last = performance.now()
-    const speed = -120 // Velocidade do plasma subindo
-
-    function tick(now: number) {
-      const dt = now - last
-      last = now
-      if (pathLength > 0) {
-        offsetRef.current = (offsetRef.current + (dt / 1000) * speed) % pathLength
-        if (pathRef.current) {
-          // Dash mais longo e fluido para parecer feixes de energia
-          const dashLen = pathLength * 0.25
-          const gap = pathLength * 0.75
-          pathRef.current.style.strokeDasharray = `${dashLen} ${gap}`
-          pathRef.current.style.strokeDashoffset = `${offsetRef.current}`
-        }
-      }
-      raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [pathLength])
-
   return (
     <svg className="fixed inset-0 w-full h-full z-[25] pointer-events-none" aria-hidden="true">
       <defs>
-        <filter id="plasma-blur">
-          <feGaussianBlur stdDeviation="4" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        {/* Filtro de Plasma Avançado - Simula o "fuzz" da imagem */}
+        <filter id="plasma-core">
+          <feGaussianBlur stdDeviation="2" result="blur1" />
+          <feGaussianBlur stdDeviation="6" result="blur2" />
+          <feMerge>
+            <feMergeNode in="blur2" />
+            <feMergeNode in="blur1" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
         </filter>
-        {/* Gradiente para a energia não cortar bruscamente */}
-        <linearGradient id="energyFade" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#d4af37" stopOpacity="0" />
-          <stop offset="20%" stopColor="#d4af37" stopOpacity="1" />
-          <stop offset="80%" stopColor="#d4af37" stopOpacity="1" />
-          <stop offset="100%" stopColor="#d4af37" stopOpacity="0" />
+
+        <linearGradient id="plasmaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#f3cc4b" stopOpacity="0" />
+          <stop offset="15%" stopColor="#f3cc4b" stopOpacity="0.8" />
+          <stop offset="85%" stopColor="#f3cc4b" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#f3cc4b" stopOpacity="0" />
         </linearGradient>
       </defs>
 
-      {/* Camada 1: Brilho Difuso (Aura do Plasma) */}
+      {/* Camada 1: Brilho Externo (Aura Atmosférica) */}
       <path
         d={pathD}
         fill="none"
-        stroke="url(#energyFade)"
-        strokeWidth={6}
+        stroke="#d4af37"
+        strokeWidth={12}
         style={{
-          filter: "blur(12px)",
-          opacity: pathOpacity * 0.4,
+          filter: "blur(25px)",
+          opacity: pathOpacity * 0.3,
         }}
       />
 
-      {/* Camada 2: Núcleo do Plasma (Animado e Fluido) */}
+      {/* Camada 2: Filamento de Plasma (A linha que sobe) */}
       <path
         ref={pathRef}
         d={pathD}
         fill="none"
-        stroke="url(#energyFade)"
-        strokeWidth={2}
+        stroke="url(#plasmaGradient)"
+        strokeWidth={2.5}
         strokeLinecap="round"
         style={{
-          filter: "url(#plasma-blur)",
-          opacity: pathOpacity,
-          transition: "opacity 0.5s ease",
+          filter: "url(#plasma-core)",
+          strokeDasharray: "150 450", 
+          strokeDashoffset: (performance.now() * 0.2) % 600, // Fluxo constante para cima
+          opacity: pathOpacity + 0.2,
         }}
       />
 
-      {/* Semente Dourada (O "Core" da energia) */}
-      <circle
-        cx={seedPosition.cx}
-        cy={seedPosition.cy}
-        r={seedPosition.r}
-        fill="#d4af37"
+      {/* Camada 3: Núcleo Brilhante (O centro do plasma) */}
+      <path
+        d={pathD}
+        fill="none"
+        stroke="#fff"
+        strokeWidth={0.8}
         style={{
-          filter: `drop-shadow(0 0 ${seedGlow}px #d4af37) drop-shadow(0 0 ${seedGlow / 3}px #fff)`,
-          transition: "r 0.15s ease-out, filter 0.15s ease-out",
-          opacity: 0.9
+          filter: "blur(1px)",
+          opacity: pathOpacity * 0.6,
         }}
       />
+
+      {/* A SEMENTE (Bolinha de Energia Estilo Tesla) */}
+      <g style={{ filter: `drop-shadow(0 0 ${seedGlow}px #f3cc4b)` }}>
+        {/* Brilho Interno */}
+        <circle
+          cx={seedPosition.cx}
+          cy={seedPosition.cy}
+          r={seedPosition.r}
+          fill="#f3cc4b"
+          style={{ opacity: 0.9 }}
+        />
+        {/* Núcleo Branco para parecer quente/energético */}
+        <circle
+          cx={seedPosition.cx}
+          cy={seedPosition.cy}
+          r={seedPosition.r * 0.4}
+          fill="#fff"
+          style={{ filter: "blur(2px)", opacity: 0.8 }}
+        />
+      </g>
     </svg>
   )
 }
