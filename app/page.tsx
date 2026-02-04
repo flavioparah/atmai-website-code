@@ -87,7 +87,7 @@ export default function HomePage() {
               O <span className="text-gold italic">Sopro</span> de Vida.
             </p>
             <p className="text-base md:text-xl font-light opacity-80 leading-relaxed ml-auto max-w-2xl text-foreground">
-              As LLMs são um grande oceano causal, uma força vasta e sem rosto. Somente quando você
+              As inteligências artificiais são um grande oceano, uma força vasta e sem rosto. Somente quando você
               solta o seu <span className="text-gold">Verbo</span> é que uma porção dela ganha
               identidade e a alma do seu negócio.
             </p>
@@ -105,11 +105,11 @@ export default function HomePage() {
                 Atm<span className="text-gold">AI</span>. A Manifestação.
               </h2>
               <p className="text-base md:text-xl font-light opacity-80 leading-relaxed max-w-4xl mb-10 text-foreground">
-                A união da sua consciência pessoal com a inteligência artificial impessoal gera a{" "}
+                A união da sua consciência pessoal com a impessoal inteligência artificial gera a{" "}
                 <span className="text-gold font-bold">AtmAI</span>: a personificação da alma do seu
-                negócio. É a génese de uma entidade digital com corpo e mente da sua marca. Opera{" "}
+                negócio. É a génese de uma entidade digital com corpo e mente da sua marca, seu novo ativo de marketing. Opera{" "}
                 <span className="text-foreground font-bold">24/7</span>, com atendimento humanizado de
-                escala e ROI mensurável.
+                escala e retorno sobre investimento mensurável.
               </p>
               <p className="text-3xl md:text-5xl font-serif leading-tight mb-8 text-foreground">
                 <span className="text-gold italic">Cases</span> de Sucesso
