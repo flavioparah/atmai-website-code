@@ -13,8 +13,6 @@ export function SpiritOverlay() {
   const offsetRef = useRef(0)
 
   useEffect(() => {
-    let animationFrame: number
-
     function updateSpirit() {
       const scrollY = window.scrollY
       const maxScroll = document.body.scrollHeight - window.innerHeight
@@ -22,50 +20,54 @@ export function SpiritOverlay() {
       
       const width = window.innerWidth
       const height = window.innerHeight
-      const time = performance.now() * 0.001
 
-      // 1. LINHA COM WOBBLE MAIS RÁPIDO (INSTABILIDADE ELÉTRICA)
-      const steps = 20
-      const amplitude = (width < 768 ? 45 : 95)
-      let d = `M ${width / 2} 0`
+      // 1. LINHA FIXA (Geometria baseada na tela, mas estável)
+      const steps = 40
+      const amplitude = (width < 768 ? 40 : 80)
+      const pts: string[] = []
 
-      for (let i = 1; i <= steps; i++) {
+      for (let i = 0; i <= steps; i++) {
         const ratio = i / steps
         const py = ratio * height
-        // Wobble mais frenético (time * 4) para simular a eletricidade da referência
-        const wobble = Math.sin(ratio * 10 + time * 4) * (4 + scrollPercent * 12)
-        const px = width / 2 + Math.sin(ratio * 4) * amplitude + wobble
-        
-        const prevRatio = (i - 0.5) / steps
-        const midX = width / 2 + Math.sin(prevRatio * 4) * amplitude + wobble
-        const midY = prevRatio * height
-        
-        d += ` Q ${midX} ${midY}, ${px} ${py}`
+        // Seno fixo baseado na posição vertical (ratio), sem o fator tempo
+        const px = width / 2 + Math.sin(ratio * 5) * amplitude
+        pts.push(`${px},${py}`)
       }
 
-      setPathD(d)
-      setPathOpacity(0.4 + scrollPercent * 0.4)
+      const newD = `M ${pts[0]} L ${pts.join(" L ")}`
+      setPathD(newD)
+      
+      // Opacidade da linha aumenta sutilmente com o scroll
+      setPathOpacity(0.1 + scrollPercent * 0.15)
 
-      // 2. BOLINHA (CRESCIMENTO E DESCIDA)
-      const startY = height * 0.1
-      const endY = height * 0.95
+      // 2. BOLINHA (Semente Espiritual)
+      // Começa em 20% da altura e termina em 85% conforme o scroll desce
+      const startY = height * 0.2
+      const endY = height * 0.85
       const currentY = startY + (endY - startY) * scrollPercent
+      
       const yRatio = currentY / height
-      const seedX = width / 2 + Math.sin(yRatio * 4) * amplitude
+      const currentX = width / 2 + Math.sin(yRatio * 5) * amplitude
 
       setSeedPosition({
-        cx: seedX,
+        cx: currentX,
         cy: currentY,
-        r: 6 + (scrollPercent * 22),
+        // Cresce de 3px para até 18px
+        r: 3 + (scrollPercent * 15),
       })
 
-      setSeedGlow(35 + (scrollPercent * 85))
-      
-      animationFrame = requestAnimationFrame(updateSpirit)
+      // O brilho aumenta drasticamente (de 15 para 60)
+      setSeedGlow(15 + (scrollPercent * 45))
     }
 
-    animationFrame = requestAnimationFrame(updateSpirit)
-    return () => cancelAnimationFrame(animationFrame)
+    updateSpirit()
+    window.addEventListener("scroll", updateSpirit)
+    window.addEventListener("resize", updateSpirit)
+
+    return () => {
+      window.removeEventListener("scroll", updateSpirit)
+      window.removeEventListener("resize", updateSpirit)
+    }
   }, [])
 
   useEffect(() => {
@@ -73,90 +75,81 @@ export function SpiritOverlay() {
     try {
       const len = pathRef.current.getTotalLength()
       setPathLength(len)
-    } catch { setPathLength(0) }
+    } catch {
+      setPathLength(0)
+    }
   }, [pathD])
+
+  useEffect(() => {
+    let raf = 0
+    let last = performance.now()
+    const speed = -60 // NEGATIVO para o fluxo subir (ao contrário)
+
+    function tick(now: number) {
+      const dt = now - last
+      last = now
+      if (pathLength > 0) {
+        // O offset negativo faz o efeito de "partículas" subir pela linha fixa
+        offsetRef.current = (offsetRef.current + (dt / 1000) * speed) % pathLength
+        if (pathRef.current) {
+          const dashLen = Math.max(Math.round(pathLength * 0.1), 10)
+          const gap = 40 
+          pathRef.current.style.strokeDasharray = `${dashLen} ${gap}`
+          pathRef.current.style.strokeDashoffset = `${offsetRef.current}`
+        }
+      }
+      raf = requestAnimationFrame(tick)
+    }
+
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [pathLength])
 
   return (
     <svg className="fixed inset-0 w-full h-full z-[25] pointer-events-none" aria-hidden="true">
+      {/* Filtro de Plasma para a Linha */}
       <defs>
-        <filter id="plasma-core">
-          <feGaussianBlur stdDeviation="1.2" result="blur1" />
-          <feGaussianBlur stdDeviation="3.5" result="blur2" />
-          <feMerge>
-            <feMergeNode in="blur2" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
+        <filter id="plasma-glow">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
-
-        <linearGradient id="plasmaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#f3cc4b" stopOpacity="0" />
-          <stop offset="20%" stopColor="#f3cc4b" stopOpacity="1" />
-          <stop offset="80%" stopColor="#f3cc4b" stopOpacity="1" />
-          <stop offset="100%" stopColor="#f3cc4b" stopOpacity="0" />
-        </linearGradient>
       </defs>
 
-      {/* Brilho Atmosférico */}
+      {/* Linha de fundo (Rastro estático translúcido) */}
       <path
         d={pathD}
         fill="none"
         stroke="#d4af37"
-        strokeWidth={14}
-        style={{
-          filter: "blur(22px)",
-          opacity: pathOpacity * 0.35,
-        }}
+        strokeWidth={0.5}
+        style={{ opacity: pathOpacity * 0.5 }}
       />
 
-      {/* FLUXO INVERTIDO E INTERVALOS MENORES */}
+      {/* Linha animada (Fluxo invertido) */}
       <path
         ref={pathRef}
         d={pathD}
         fill="none"
-        stroke="url(#plasmaGradient)"
-        strokeWidth={3.5}
+        stroke="#d4af37"
+        strokeWidth={1.2}
         strokeLinecap="round"
         style={{
-          filter: "url(#plasma-core)",
-          // Fragmentos menores (5%) e intervalos menores (10%) para maior densidade
-          strokeDasharray: `${pathLength * 0.05} ${pathLength * 0.10}`, 
-          // Valor POSITIVO no Dashoffset com movimento contínuo faz o fluxo SUBIR
-          strokeDashoffset: (performance.now() * 0.5), 
+          filter: "url(#plasma-glow)",
           opacity: pathOpacity,
+          transition: "opacity 0.4s ease",
         }}
       />
 
-      {/* Núcleo Incandescente (Fios brancos rápidos) */}
-      <path
-        d={pathD}
-        fill="none"
-        stroke="#fff"
-        strokeWidth={0.6}
+      {/* Semente Dourada (Aumenta e Brilha com Scroll) */}
+      <circle
+        cx={seedPosition.cx}
+        cy={seedPosition.cy}
+        r={seedPosition.r}
+        fill="#d4af37"
         style={{
-          filter: "blur(1px)",
-          strokeDasharray: `${pathLength * 0.02} ${pathLength * 0.08}`,
-          strokeDashoffset: (performance.now() * 0.6),
-          opacity: pathOpacity * 0.9,
+          filter: `drop-shadow(0 0 ${seedGlow}px #d4af37) drop-shadow(0 0 ${seedGlow / 2}px #fff)`,
+          transition: "r 0.1s ease-out, filter 0.1s ease-out",
         }}
       />
-
-      {/* BOLINHA DE PLASMA (SEMENTE) */}
-      <g style={{ filter: `drop-shadow(0 0 ${seedGlow}px #f3cc4b)` }}>
-        <circle
-          cx={seedPosition.cx}
-          cy={seedPosition.cy}
-          r={seedPosition.r}
-          fill="#f3cc4b"
-        />
-        {/* Centro de calor intenso */}
-        <circle
-          cx={seedPosition.cx}
-          cy={seedPosition.cy}
-          r={seedPosition.r * 0.35}
-          fill="#fff"
-          style={{ filter: "blur(1.5px)" }}
-        />
-      </g>
     </svg>
   )
 }
