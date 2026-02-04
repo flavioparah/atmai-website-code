@@ -24,16 +24,16 @@ export function SpiritOverlay() {
       const height = window.innerHeight
       const time = performance.now() * 0.001
 
-      // 1. LINHA COM CURVATURA E WOBBLE (PLASMA VIVO)
-      const steps = 15
-      const amplitude = (width < 768 ? 40 : 90)
+      // 1. LINHA COM WOBBLE MAIS RÁPIDO (INSTABILIDADE ELÉTRICA)
+      const steps = 20
+      const amplitude = (width < 768 ? 45 : 95)
       let d = `M ${width / 2} 0`
 
       for (let i = 1; i <= steps; i++) {
         const ratio = i / steps
         const py = ratio * height
-        // O wobble simula a instabilidade do plasma da foto
-        const wobble = Math.sin(ratio * 8 + time * 2) * (5 + scrollPercent * 10)
+        // Wobble mais frenético (time * 4) para simular a eletricidade da referência
+        const wobble = Math.sin(ratio * 10 + time * 4) * (4 + scrollPercent * 12)
         const px = width / 2 + Math.sin(ratio * 4) * amplitude + wobble
         
         const prevRatio = (i - 0.5) / steps
@@ -44,23 +44,22 @@ export function SpiritOverlay() {
       }
 
       setPathD(d)
-      setPathOpacity(0.3 + scrollPercent * 0.4)
+      setPathOpacity(0.4 + scrollPercent * 0.4)
 
-      // 2. BOLINHA (CRESCIMENTO E BRILHO)
+      // 2. BOLINHA (CRESCIMENTO E DESCIDA)
       const startY = height * 0.1
-      const endY = height * 0.9
+      const endY = height * 0.95
       const currentY = startY + (endY - startY) * scrollPercent
-      
       const yRatio = currentY / height
       const seedX = width / 2 + Math.sin(yRatio * 4) * amplitude
 
       setSeedPosition({
         cx: seedX,
         cy: currentY,
-        r: 6 + (scrollPercent * 20),
+        r: 6 + (scrollPercent * 22),
       })
 
-      setSeedGlow(30 + (scrollPercent * 80))
+      setSeedGlow(35 + (scrollPercent * 85))
       
       animationFrame = requestAnimationFrame(updateSpirit)
     }
@@ -81,8 +80,8 @@ export function SpiritOverlay() {
     <svg className="fixed inset-0 w-full h-full z-[25] pointer-events-none" aria-hidden="true">
       <defs>
         <filter id="plasma-core">
-          <feGaussianBlur stdDeviation="1.5" result="blur1" />
-          <feGaussianBlur stdDeviation="4" result="blur2" />
+          <feGaussianBlur stdDeviation="1.2" result="blur1" />
+          <feGaussianBlur stdDeviation="3.5" result="blur2" />
           <feMerge>
             <feMergeNode in="blur2" />
             <feMergeNode in="SourceGraphic" />
@@ -91,56 +90,57 @@ export function SpiritOverlay() {
 
         <linearGradient id="plasmaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#f3cc4b" stopOpacity="0" />
-          <stop offset="20%" stopColor="#f3cc4b" stopOpacity="0.9" />
-          <stop offset="80%" stopColor="#f3cc4b" stopOpacity="0.9" />
+          <stop offset="20%" stopColor="#f3cc4b" stopOpacity="1" />
+          <stop offset="80%" stopColor="#f3cc4b" stopOpacity="1" />
           <stop offset="100%" stopColor="#f3cc4b" stopOpacity="0" />
         </linearGradient>
       </defs>
 
-      {/* Camada de Aura (Glow de Fundo) */}
+      {/* Brilho Atmosférico */}
       <path
         d={pathD}
         fill="none"
         stroke="#d4af37"
-        strokeWidth={10}
+        strokeWidth={14}
         style={{
-          filter: "blur(20px)",
-          opacity: pathOpacity * 0.4,
+          filter: "blur(22px)",
+          opacity: pathOpacity * 0.35,
         }}
       />
 
-      {/* CAMADA FRAGMENTADA (O segredo do plasma não ser contínuo) */}
+      {/* FLUXO INVERTIDO E INTERVALOS MENORES */}
       <path
         ref={pathRef}
         d={pathD}
         fill="none"
         stroke="url(#plasmaGradient)"
-        strokeWidth={3}
+        strokeWidth={3.5}
         strokeLinecap="round"
         style={{
           filter: "url(#plasma-core)",
-          // Aqui definimos traços longos com espaços grandes (Fragmentação)
-          strokeDasharray: `${pathLength * 0.15} ${pathLength * 0.35}`, 
-          strokeDashoffset: (performance.now() * 0.3), // Faz os fragmentos subirem rápido
+          // Fragmentos menores (5%) e intervalos menores (10%) para maior densidade
+          strokeDasharray: `${pathLength * 0.05} ${pathLength * 0.10}`, 
+          // Valor POSITIVO no Dashoffset com movimento contínuo faz o fluxo SUBIR
+          strokeDashoffset: (performance.now() * 0.5), 
           opacity: pathOpacity,
         }}
       />
 
-      {/* Núcleo Incandescente (Linha branca central fina) */}
+      {/* Núcleo Incandescente (Fios brancos rápidos) */}
       <path
         d={pathD}
         fill="none"
         stroke="#fff"
-        strokeWidth={0.5}
+        strokeWidth={0.6}
         style={{
           filter: "blur(1px)",
-          strokeDasharray: `${pathLength * 0.05} ${pathLength * 0.45}`,
-          strokeDashoffset: (performance.now() * 0.3),
-          opacity: pathOpacity * 0.8,
+          strokeDasharray: `${pathLength * 0.02} ${pathLength * 0.08}`,
+          strokeDashoffset: (performance.now() * 0.6),
+          opacity: pathOpacity * 0.9,
         }}
       />
 
-      {/* BOLINHA DE PLASMA */}
+      {/* BOLINHA DE PLASMA (SEMENTE) */}
       <g style={{ filter: `drop-shadow(0 0 ${seedGlow}px #f3cc4b)` }}>
         <circle
           cx={seedPosition.cx}
@@ -148,12 +148,13 @@ export function SpiritOverlay() {
           r={seedPosition.r}
           fill="#f3cc4b"
         />
+        {/* Centro de calor intenso */}
         <circle
           cx={seedPosition.cx}
           cy={seedPosition.cy}
-          r={seedPosition.r * 0.3}
+          r={seedPosition.r * 0.35}
           fill="#fff"
-          style={{ filter: "blur(2px)" }}
+          style={{ filter: "blur(1.5px)" }}
         />
       </g>
     </svg>
