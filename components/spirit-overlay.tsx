@@ -22,59 +22,51 @@ export function SpiritOverlay() {
       
       const width = window.innerWidth
       const height = window.innerHeight
-      const time = performance.now() * 0.001 // Tempo para animação orgânica
+      const time = performance.now() * 0.001
 
-      // 1. LINHA FIXA COM MOVIMENTO DE PLASMA (WOBBLE)
+      // 1. LINHA COM CURVATURA E WOBBLE (PLASMA VIVO)
       const steps = 15
-      const amplitude = (width < 768 ? 40 : 80)
+      const amplitude = (width < 768 ? 40 : 90)
       let d = `M ${width / 2} 0`
 
       for (let i = 1; i <= steps; i++) {
         const ratio = i / steps
         const py = ratio * height
-        
-        // Adiciona uma pequena variação temporal (time) para a linha "viver"
-        const wobble = Math.sin(ratio * 6 + time) * 3 
+        // O wobble simula a instabilidade do plasma da foto
+        const wobble = Math.sin(ratio * 8 + time * 2) * (5 + scrollPercent * 10)
         const px = width / 2 + Math.sin(ratio * 4) * amplitude + wobble
         
         const prevRatio = (i - 0.5) / steps
-        const midWobble = Math.sin(prevRatio * 6 + time) * 3
-        const midX = width / 2 + Math.sin(prevRatio * 4) * amplitude + midWobble
+        const midX = width / 2 + Math.sin(prevRatio * 4) * amplitude + wobble
         const midY = prevRatio * height
         
         d += ` Q ${midX} ${midY}, ${px} ${py}`
       }
 
       setPathD(d)
-      setPathOpacity(0.2 + scrollPercent * 0.3)
+      setPathOpacity(0.3 + scrollPercent * 0.4)
 
-      // 2. BOLINHA (Semente de Plasma)
+      // 2. BOLINHA (CRESCIMENTO E BRILHO)
       const startY = height * 0.1
-      const endY = height * 0.95
+      const endY = height * 0.9
       const currentY = startY + (endY - startY) * scrollPercent
       
       const yRatio = currentY / height
-      const seedWobble = Math.sin(yRatio * 6 + time) * 3
-      const currentX = width / 2 + Math.sin(yRatio * 4) * amplitude + seedWobble
+      const seedX = width / 2 + Math.sin(yRatio * 4) * amplitude
 
       setSeedPosition({
-        cx: currentX,
+        cx: seedX,
         cy: currentY,
-        r: 5 + (scrollPercent * 25), // Fica bem grande no final
+        r: 6 + (scrollPercent * 20),
       })
 
-      setSeedGlow(25 + (scrollPercent * 70))
+      setSeedGlow(30 + (scrollPercent * 80))
       
       animationFrame = requestAnimationFrame(updateSpirit)
     }
 
     animationFrame = requestAnimationFrame(updateSpirit)
-    window.addEventListener("scroll", () => {}) // Trigger de re-render opcional
-    window.addEventListener("resize", () => {})
-
-    return () => {
-      cancelAnimationFrame(animationFrame)
-    }
+    return () => cancelAnimationFrame(animationFrame)
   }, [])
 
   useEffect(() => {
@@ -88,82 +80,80 @@ export function SpiritOverlay() {
   return (
     <svg className="fixed inset-0 w-full h-full z-[25] pointer-events-none" aria-hidden="true">
       <defs>
-        {/* Filtro de Plasma Avançado - Simula o "fuzz" da imagem */}
         <filter id="plasma-core">
-          <feGaussianBlur stdDeviation="2" result="blur1" />
-          <feGaussianBlur stdDeviation="6" result="blur2" />
+          <feGaussianBlur stdDeviation="1.5" result="blur1" />
+          <feGaussianBlur stdDeviation="4" result="blur2" />
           <feMerge>
             <feMergeNode in="blur2" />
-            <feMergeNode in="blur1" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
 
         <linearGradient id="plasmaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#f3cc4b" stopOpacity="0" />
-          <stop offset="15%" stopColor="#f3cc4b" stopOpacity="0.8" />
-          <stop offset="85%" stopColor="#f3cc4b" stopOpacity="0.8" />
+          <stop offset="20%" stopColor="#f3cc4b" stopOpacity="0.9" />
+          <stop offset="80%" stopColor="#f3cc4b" stopOpacity="0.9" />
           <stop offset="100%" stopColor="#f3cc4b" stopOpacity="0" />
         </linearGradient>
       </defs>
 
-      {/* Camada 1: Brilho Externo (Aura Atmosférica) */}
+      {/* Camada de Aura (Glow de Fundo) */}
       <path
         d={pathD}
         fill="none"
         stroke="#d4af37"
-        strokeWidth={12}
+        strokeWidth={10}
         style={{
-          filter: "blur(25px)",
-          opacity: pathOpacity * 0.3,
+          filter: "blur(20px)",
+          opacity: pathOpacity * 0.4,
         }}
       />
 
-      {/* Camada 2: Filamento de Plasma (A linha que sobe) */}
+      {/* CAMADA FRAGMENTADA (O segredo do plasma não ser contínuo) */}
       <path
         ref={pathRef}
         d={pathD}
         fill="none"
         stroke="url(#plasmaGradient)"
-        strokeWidth={2.5}
+        strokeWidth={3}
         strokeLinecap="round"
         style={{
           filter: "url(#plasma-core)",
-          strokeDasharray: "150 450", 
-          strokeDashoffset: (performance.now() * 0.2) % 600, // Fluxo constante para cima
-          opacity: pathOpacity + 0.2,
+          // Aqui definimos traços longos com espaços grandes (Fragmentação)
+          strokeDasharray: `${pathLength * 0.15} ${pathLength * 0.35}`, 
+          strokeDashoffset: (performance.now() * 0.3), // Faz os fragmentos subirem rápido
+          opacity: pathOpacity,
         }}
       />
 
-      {/* Camada 3: Núcleo Brilhante (O centro do plasma) */}
+      {/* Núcleo Incandescente (Linha branca central fina) */}
       <path
         d={pathD}
         fill="none"
         stroke="#fff"
-        strokeWidth={0.8}
+        strokeWidth={0.5}
         style={{
           filter: "blur(1px)",
-          opacity: pathOpacity * 0.6,
+          strokeDasharray: `${pathLength * 0.05} ${pathLength * 0.45}`,
+          strokeDashoffset: (performance.now() * 0.3),
+          opacity: pathOpacity * 0.8,
         }}
       />
 
-      {/* A SEMENTE (Bolinha de Energia Estilo Tesla) */}
+      {/* BOLINHA DE PLASMA */}
       <g style={{ filter: `drop-shadow(0 0 ${seedGlow}px #f3cc4b)` }}>
-        {/* Brilho Interno */}
         <circle
           cx={seedPosition.cx}
           cy={seedPosition.cy}
           r={seedPosition.r}
           fill="#f3cc4b"
-          style={{ opacity: 0.9 }}
         />
-        {/* Núcleo Branco para parecer quente/energético */}
         <circle
           cx={seedPosition.cx}
           cy={seedPosition.cy}
-          r={seedPosition.r * 0.4}
+          r={seedPosition.r * 0.3}
           fill="#fff"
-          style={{ filter: "blur(2px)", opacity: 0.8 }}
+          style={{ filter: "blur(2px)" }}
         />
       </g>
     </svg>
