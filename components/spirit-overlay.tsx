@@ -21,43 +21,43 @@ export function SpiritOverlay() {
       const width = window.innerWidth
       const height = window.innerHeight
 
-      // 1. LINHA FIXA (Geometria baseada na tela, mas estável)
-      const steps = 40
-      const amplitude = (width < 768 ? 40 : 80)
-      const pts: string[] = []
+      // 1. LINHA FLUIDA (Cálculo de Curva Suave)
+      const steps = 12 // Menos passos com curvas geram um visual mais orgânico
+      const amplitude = (width < 768 ? 50 : 100)
+      let d = `M ${width / 2} 0`
 
-      for (let i = 0; i <= steps; i++) {
+      for (let i = 1; i <= steps; i++) {
         const ratio = i / steps
         const py = ratio * height
-        // Seno fixo baseado na posição vertical (ratio), sem o fator tempo
-        const px = width / 2 + Math.sin(ratio * 5) * amplitude
-        pts.push(`${px},${py}`)
+        const px = width / 2 + Math.sin(ratio * 4) * amplitude
+        
+        // Usamos Quadratic Curve (Q) para suavizar a "espinha dorsal" do plasma
+        const prevRatio = (i - 0.5) / steps
+        const midX = width / 2 + Math.sin(prevRatio * 4) * amplitude
+        const midY = (prevRatio) * height
+        
+        d += ` Q ${midX} ${midY}, ${px} ${py}`
       }
 
-      const newD = `M ${pts[0]} L ${pts.join(" L ")}`
-      setPathD(newD)
-      
-      // Opacidade da linha aumenta sutilmente com o scroll
-      setPathOpacity(0.1 + scrollPercent * 0.15)
+      setPathD(d)
+      setPathOpacity(0.15 + scrollPercent * 0.2)
 
-      // 2. BOLINHA (Semente Espiritual)
-      // Começa em 20% da altura e termina em 85% conforme o scroll desce
-      const startY = height * 0.2
-      const endY = height * 0.85
+      // 2. BOLINHA (Semente Energética)
+      const startY = height * 0.15
+      const endY = height * 0.9
       const currentY = startY + (endY - startY) * scrollPercent
       
+      // Encontrar o X correspondente na curva para a bolinha seguir o caminho
       const yRatio = currentY / height
-      const currentX = width / 2 + Math.sin(yRatio * 5) * amplitude
+      const currentX = width / 2 + Math.sin(yRatio * 4) * amplitude
 
       setSeedPosition({
         cx: currentX,
         cy: currentY,
-        // Cresce de 3px para até 18px
-        r: 3 + (scrollPercent * 15),
+        r: 4 + (scrollPercent * 18), // Aumenta significativamente
       })
 
-      // O brilho aumenta drasticamente (de 15 para 60)
-      setSeedGlow(15 + (scrollPercent * 45))
+      setSeedGlow(20 + (scrollPercent * 60))
     }
 
     updateSpirit()
@@ -75,79 +75,86 @@ export function SpiritOverlay() {
     try {
       const len = pathRef.current.getTotalLength()
       setPathLength(len)
-    } catch {
-      setPathLength(0)
-    }
+    } catch { setPathLength(0) }
   }, [pathD])
 
   useEffect(() => {
     let raf = 0
     let last = performance.now()
-    const speed = -60 // NEGATIVO para o fluxo subir (ao contrário)
+    const speed = -120 // Velocidade do plasma subindo
 
     function tick(now: number) {
       const dt = now - last
       last = now
       if (pathLength > 0) {
-        // O offset negativo faz o efeito de "partículas" subir pela linha fixa
         offsetRef.current = (offsetRef.current + (dt / 1000) * speed) % pathLength
         if (pathRef.current) {
-          const dashLen = Math.max(Math.round(pathLength * 0.1), 10)
-          const gap = 40 
+          // Dash mais longo e fluido para parecer feixes de energia
+          const dashLen = pathLength * 0.25
+          const gap = pathLength * 0.75
           pathRef.current.style.strokeDasharray = `${dashLen} ${gap}`
           pathRef.current.style.strokeDashoffset = `${offsetRef.current}`
         }
       }
       raf = requestAnimationFrame(tick)
     }
-
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
   }, [pathLength])
 
   return (
     <svg className="fixed inset-0 w-full h-full z-[25] pointer-events-none" aria-hidden="true">
-      {/* Filtro de Plasma para a Linha */}
       <defs>
-        <filter id="plasma-glow">
-          <feGaussianBlur stdDeviation="3" result="blur" />
+        <filter id="plasma-blur">
+          <feGaussianBlur stdDeviation="4" result="blur" />
           <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
+        {/* Gradiente para a energia não cortar bruscamente */}
+        <linearGradient id="energyFade" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#d4af37" stopOpacity="0" />
+          <stop offset="20%" stopColor="#d4af37" stopOpacity="1" />
+          <stop offset="80%" stopColor="#d4af37" stopOpacity="1" />
+          <stop offset="100%" stopColor="#d4af37" stopOpacity="0" />
+        </linearGradient>
       </defs>
 
-      {/* Linha de fundo (Rastro estático translúcido) */}
+      {/* Camada 1: Brilho Difuso (Aura do Plasma) */}
       <path
         d={pathD}
         fill="none"
-        stroke="#d4af37"
-        strokeWidth={0.5}
-        style={{ opacity: pathOpacity * 0.5 }}
+        stroke="url(#energyFade)"
+        strokeWidth={6}
+        style={{
+          filter: "blur(12px)",
+          opacity: pathOpacity * 0.4,
+        }}
       />
 
-      {/* Linha animada (Fluxo invertido) */}
+      {/* Camada 2: Núcleo do Plasma (Animado e Fluido) */}
       <path
         ref={pathRef}
         d={pathD}
         fill="none"
-        stroke="#d4af37"
-        strokeWidth={1.2}
+        stroke="url(#energyFade)"
+        strokeWidth={2}
         strokeLinecap="round"
         style={{
-          filter: "url(#plasma-glow)",
+          filter: "url(#plasma-blur)",
           opacity: pathOpacity,
-          transition: "opacity 0.4s ease",
+          transition: "opacity 0.5s ease",
         }}
       />
 
-      {/* Semente Dourada (Aumenta e Brilha com Scroll) */}
+      {/* Semente Dourada (O "Core" da energia) */}
       <circle
         cx={seedPosition.cx}
         cy={seedPosition.cy}
         r={seedPosition.r}
         fill="#d4af37"
         style={{
-          filter: `drop-shadow(0 0 ${seedGlow}px #d4af37) drop-shadow(0 0 ${seedGlow / 2}px #fff)`,
-          transition: "r 0.1s ease-out, filter 0.1s ease-out",
+          filter: `drop-shadow(0 0 ${seedGlow}px #d4af37) drop-shadow(0 0 ${seedGlow / 3}px #fff)`,
+          transition: "r 0.15s ease-out, filter 0.15s ease-out",
+          opacity: 0.9
         }}
       />
     </svg>
