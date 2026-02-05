@@ -10,7 +10,6 @@ export function SpiritOverlay() {
 
   const pathRef = useRef<SVGPathElement | null>(null)
   const [pathLength, setPathLength] = useState(0)
-  const offsetRef = useRef(0)
 
   useEffect(() => {
     let animationFrame: number
@@ -24,7 +23,7 @@ export function SpiritOverlay() {
       const height = window.innerHeight
       const time = performance.now() * 0.001
 
-      // 1. LINHA ONDULADA (Filamento Tesla)
+      // 1. LINHA ONDULADA
       const steps = 50
       const amplitude = (width < 768 ? 50 : 110)
       let d = `M ${width / 2} 0`
@@ -32,14 +31,11 @@ export function SpiritOverlay() {
       for (let i = 1; i <= steps; i++) {
         const ratio = i / steps
         const py = ratio * height
-        // Micro-oscilação para o efeito "vivo"
         const microWobble = Math.sin(ratio * 20 + time * 5) * 2
         const px = width / 2 + Math.sin(ratio * 4 + time * 0.5) * amplitude + microWobble
-        
         const prevRatio = (i - 0.5) / steps
         const midX = width / 2 + Math.sin(prevRatio * 4 + time * 0.5) * amplitude
         const midY = prevRatio * height
-        
         d += ` Q ${midX} ${midY}, ${px} ${py}`
       }
 
@@ -56,10 +52,11 @@ export function SpiritOverlay() {
       setSeedPosition({
         cx: seedX,
         cy: currentY,
-        r: 6 + (scrollPercent * 24),
+        r: 8 + (scrollPercent * 20), // Levemente maior para compensar o desfoque
       })
 
-      setSeedGlow(35 + (scrollPercent * 75) + Math.sin(time * 10) * 5)
+      // Pulsação suave do brilho
+      setSeedGlow(40 + (scrollPercent * 60) + Math.sin(time * 8) * 10)
       
       animationFrame = requestAnimationFrame(updateSpirit)
     }
@@ -68,17 +65,10 @@ export function SpiritOverlay() {
     return () => cancelAnimationFrame(animationFrame)
   }, [])
 
-  useEffect(() => {
-    if (!pathRef.current) return
-    try {
-      const len = pathRef.current.getTotalLength()
-      setPathLength(len)
-    } catch { setPathLength(0) }
-  }, [pathD])
-
   return (
     <svg className="fixed inset-0 w-full h-full z-[25] pointer-events-none" aria-hidden="true">
       <defs>
+        {/* Filtro de Glow para a linha */}
         <filter id="ultra-glow">
           <feGaussianBlur stdDeviation="2.5" result="blur1" />
           <feGaussianBlur stdDeviation="10" result="blur2" />
@@ -89,6 +79,13 @@ export function SpiritOverlay() {
           </feMerge>
         </filter>
 
+        {/* GRADIENTE DA BOLA DE LUZ - Essencial para tirar a borda sólida */}
+        <radialGradient id="seedGradient">
+          <stop offset="0%" stopColor="#fff" stopOpacity="1" />
+          <stop offset="30%" stopColor="#f3cc4b" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#f3cc4b" stopOpacity="0" />
+        </radialGradient>
+
         <linearGradient id="plasmaLine" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#f3cc4b" stopOpacity="0" />
           <stop offset="20%" stopColor="#f3cc4b" stopOpacity="0.9" />
@@ -97,56 +94,59 @@ export function SpiritOverlay() {
         </linearGradient>
       </defs>
 
-      {/* Aura Difusa */}
+      {/* Aura Difusa do Caminho */}
       <path
         d={pathD}
         fill="none"
         stroke="#d4af37"
-        strokeWidth={18}
-        style={{
-          filter: "blur(30px)",
-          opacity: pathOpacity * 0.35,
-        }}
+        strokeWidth={25}
+        style={{ filter: "blur(40px)", opacity: pathOpacity * 0.3 }}
       />
 
-      {/* FILAMENTO COM TRAÇOS LONGOS */}
+      {/* FILAMENTO */}
       <path
         ref={pathRef}
         d={pathD}
         fill="none"
         stroke="url(#plasmaLine)"
-        strokeWidth={3}
+        strokeWidth={2}
         strokeLinecap="round"
         style={{
           filter: "url(#ultra-glow)",
-          // Aumentado para 400 (traço longo) e 200 (espaço)
           strokeDasharray: "400 200", 
-          strokeDashoffset: -(performance.now() * 0.6), // Descendo mais rápido
+          strokeDashoffset: -(performance.now() * 0.6),
           opacity: pathOpacity,
         }}
       />
 
-      {/* BOLINHA - NÚCLEO TESLA */}
+      {/* BOLINHA - Transformada em Bola de Luz */}
       <g style={{ filter: `drop-shadow(0 0 ${seedGlow}px #f3cc4b)` }}>
+        {/* Brilho Externo (Aura) */}
         <circle
           cx={seedPosition.cx}
           cy={seedPosition.cy}
-          r={seedPosition.r * 1.6}
-          fill="rgba(243, 204, 75, 0.25)"
-          style={{ filter: "blur(10px)" }}
-        />
-        <circle
-          cx={seedPosition.cx}
-          cy={seedPosition.cy}
-          r={seedPosition.r}
+          r={seedPosition.r * 2.5}
           fill="#f3cc4b"
+          fillOpacity="0.15"
+          style={{ filter: "blur(15px)" }}
         />
+        
+        {/* Núcleo Gradiente (Substitui a bola sólida) */}
         <circle
           cx={seedPosition.cx}
           cy={seedPosition.cy}
-          r={seedPosition.r * 0.38}
+          r={seedPosition.r * 1.5}
+          fill="url(#seedGradient)"
+          style={{ filter: "blur(2px)" }}
+        />
+
+        {/* Centro de incandescência (Hotspot) */}
+        <circle
+          cx={seedPosition.cx}
+          cy={seedPosition.cy}
+          r={seedPosition.r * 0.4}
           fill="#fff"
-          style={{ filter: "blur(2.5px)", opacity: 0.95 }}
+          style={{ filter: "blur(4px)", opacity: 0.8 }}
         />
       </g>
     </svg>
