@@ -49,11 +49,13 @@ export default function HomePage() {
       <main>
         {/* Hero Section */}
         <ManifestoSection initialVisible>
-          <div className="text-center px-4">
+          <div className="text-center px-4 relative">
             <h1 className="font-serif text-[5.5rem] leading-[0.9] sm:text-8xl md:text-[11rem] mb-6 md:mb-10 tracking-[0.1em] md:tracking-[0.2em] text-foreground">
               Atm<span className="text-gold">AI</span>
             </h1>
-            <p className="text-[10px] md:text-xl font-light opacity-60 tracking-[0.3em] md:tracking-[0.5em] uppercase max-w-2xl mx-auto text-foreground">
+            
+            {/* Texto forçado em uma única linha */}
+            <p className="whitespace-nowrap inline-block relative left-1/2 -translate-x-1/2 text-[10px] md:text-xl font-light opacity-60 tracking-[0.3em] md:tracking-[0.5em] uppercase text-foreground">
               Infra de <span className="text-gold">AI</span> com a{" "}
               <span className="text-foreground border-b border-gold">Alma</span> do seu negócio.
             </p>
