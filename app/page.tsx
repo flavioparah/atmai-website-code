@@ -54,7 +54,7 @@ export default function HomePage() {
               Atm<span className="text-gold">AI</span>
             </h1>
             <p className="text-[10px] md:text-xl font-light opacity-60 tracking-[0.3em] md:tracking-[0.5em] uppercase max-w-2xl mx-auto text-foreground">
-              Infra de <span className="text-gold">AI</span> com a{" "}
+              Infra de <span className="text-gold">AI</span> com{" "}
               <span className="text-foreground border-b border-gold">Alma</span> do seu negócio.
             </p>
           </div>
