@@ -21,6 +21,7 @@ export default function HomePage() {
       role: "Assistente Virtual",
       description: "O guardião da consciência alimentar e sabedoria dos ingredientes.",
       image: "/images/maha.jpeg",
+      href: "https://www.instagram.com/p/DVt91JnxGZj/",
     },
     {
       name: "Marvin",
@@ -135,7 +136,7 @@ export default function HomePage() {
               <p className="text-base md:text-xl font-light opacity-80 leading-relaxed max-w-4xl mb-10 text-foreground">
                 A união da sua consciência pessoal com a impessoal inteligência artificial gera a{" "}
                 <span className="text-gold font-bold">AtmAI</span>: a personificação da alma do seu
-                negócio.
+                negócio. Uma entidade digital e poderoso ativo de marketing, que fala no feed, faz call to atcion para o chat, responde 24/7 para 10 a 1000 pessoas ao mesmo tempo, sem perder a personalidade humanizada.
               </p>
               <p className="text-3xl md:text-5xl font-serif leading-tight mb-8 text-foreground">
                 <span className="text-gold italic">Cases</span> de Sucesso
