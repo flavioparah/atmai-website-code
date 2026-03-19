@@ -76,7 +76,7 @@ export default function HomePage() {
           <ManifestoSection>
             <div className="text-center px-4 w-full py-0">
               <a
-                href="https://wa.me/559192250381?text=Ol%C3%A1%2C%20quero%20iniciar%20a%20g%C3%AAnese%20da%20minha%20AtmAI"
+                href="https://wa.me/5591981943695?text=Ol%C3%A1%2C%20quero%20iniciar%20a%20g%C3%AAnese%20da%20minha%20AtmAI"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="cta-btn text-lg md:text-xl px-8 py-3"
@@ -157,7 +157,7 @@ export default function HomePage() {
               A sua marca possui alma.<br />
               <span className="text-gold italic">Manifeste-a no mundo digital.</span>
             </p>
-            <a href="https://wa.me/559192250381?text=Ol%C3%A1%2C%20quero%20iniciar%20a%20g%C3%AAnese%20da%20minha%20AtmAI" target="_blank" rel="noopener noreferrer" className="cta-btn">
+            <a href="https://wa.me/5591981943695?text=Ol%C3%A1%2C%20quero%20iniciar%20a%20g%C3%AAnese%20da%20minha%20AtmAI" target="_blank" rel="noopener noreferrer" className="cta-btn">
               Inicie a Gênese de sua AtmAI
             </a>
           </div>
